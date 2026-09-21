@@ -270,14 +270,3 @@ RAG-Enterprise-Document-Chatbot/
 ```
 
 `Others/` keeps older versions of code and components that were built separately before being folded into `Main/`.
-
----
-
-## Known Limitations / Roadmap
-
-- **The backend trusts the caller's role.** Permission checks run in the Streamlit layer; the FastAPI endpoints do not yet validate the Cognito token. Verifying the JWT server-side is the most important hardening step.
-- **Single in-memory index.** One global FAISS index is rebuilt per org/dept prefix, so users across tenants trigger repeated rebuilds. A per-tenant index cache or a managed vector store would remove this.
-- **Element-based chunking.** Each `unstructured` element becomes one chunk with no overlap, and BERT truncates long elements at 512 tokens. Sentence-window or token-budget chunking would improve recall.
-- **`metadata_store.pkl` is local state.** It does not survive instance replacement; moving it to S3 or DynamoDB would make deployments stateless.
-- **Uploads are written to the backend's working directory** under their original filename before processing — a temp directory with unique names would be safer.
-- **Cognito settings are hardcoded** in `Frontend.py` and belong in environment variables.

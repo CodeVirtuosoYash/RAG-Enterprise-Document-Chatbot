@@ -1,0 +1,77 @@
+## Backend
+# Core
+fastapi
+uvicorn[standard]
+
+# AWS S3
+boto3
+botocore
+
+# Environment and I/O
+python-dotenv
+base64
+shutil
+zipfile36
+
+# Typing and Data Handling
+pydantic
+typing-extensions
+pathlib
+
+# CORS Middleware
+fastapi[all]
+
+# FAISS for vector indexing
+faiss-cpu
+
+# PyTorch + Transformers
+torch
+transformers
+
+# Hugging Face BERT
+sentence-transformers  # optional if you're embedding using another method
+# transformers includes BertModel, BertTokenizer
+
+# Profanity Filter
+better-profanity
+
+# Unstructured I/O
+unstructured[all-docs,pdf,pptx,docx]
+
+# For PDF high-res image extraction
+pillow
+pdf2image
+poppler-utils  # not a pip package; install via apt on Linux: `sudo apt install poppler-utils`
+
+# Groq SDK
+groq
+
+# Optional (for image encoding)
+numpy
+
+##Frontend
+# UI Framework
+streamlit
+
+# API Requests
+requests
+
+# Environment Variables
+python-dotenv
+
+# CSV, Regex, JSON, Hashing
+pandas  # likely used in role_modfication for reading/writing CSV
+openpyxl  # required for Excel/CSV compatibility in pandas
+regex
+
+# Utility and Typing
+typing-extensions
+
+# For date, hashing, etc. (built-in, but listed for clarity)
+datetime
+hashlib
+re
+os
+base64
+json
+

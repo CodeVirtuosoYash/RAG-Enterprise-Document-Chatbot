@@ -1,0 +1,101 @@
+# Frontend.py Documentation
+
+## Overview
+
+`Frontend.py` is a Streamlit-based frontend for interacting with a multi-organization document search and Q&A system powered by a FastAPI backend. It enables users to authenticate, select a model (such as Groq), and ask questions to retrieve answers based on their organization's indexed documents.
+
+## Features
+
+- Role-Based Access Control: Extracts organization and department details from email domains to personalize user access.
+- Session State Management: Maintains persistent user inputs, model selection, and chat history within the Streamlit session.
+- Interactive Chat UI: Provides a dynamic chat interface for natural language queries and LLM-generated responses.
+- Backend API Integration: Sends and receives data from a backend API using HTTP requests.
+- Model Selection: Allows dynamic selection of different LLMs for answer generation.
+- Environment Configuration: Uses `.env` file to configure backend API endpoints.
+
+## Environment Variables
+
+Set the following environment variables in a `.env` file:
+
+- API_URL: The full URL of the FastAPI backend (e.g., http://localhost:8000 or deployed endpoint).
+
+## Application Flow
+
+1. Loads the backend API URL from environment variables.
+2. Initializes session state (e.g., chat history, selected model, user metadata).
+3. Prompts the user to enter their email and determines their organization and department.
+4. Enables model selection via a dropdown menu.
+5. Accepts a user question and sends it to the backend along with org/department context.
+6. Displays the LLM-generated answer and tracks conversation history.
+
+## UI Components
+
+1. Email Input and Role Extraction
+   - Accepts user email.
+   - Calls `get_organization_and_department(email)` from `role_modfication.py` to determine access scope.
+
+2. Model Selection
+   - Provides a dropdown with available LLMs like Groq, Mistral, LLaMA, etc.
+   - Stores selection in session state for persistent usage.
+
+3. Chat Input
+   - Users type in a question.
+   - The frontend sends this to the backend `/Answer` endpoint with org/dept/model information.
+   - Displays the answer and source documents in the chat panel.
+
+4. Message History
+   - Maintains user queries and corresponding LLM responses.
+   - Appends each new interaction to session state for display.
+
+## API Calls Made
+
+POST /Answer
+
+Description: Submit a question for the selected model and receive an answer with source documents.
+
+Payload Example:
+{
+  "query": "What is the leave policy?",
+  "org": "example_org",
+  "dept": "example_dept",
+  "selected_model": "groq"
+}
+
+Expected Response:
+{
+  "result": "The leave policy allows 18 days...",
+  "source_documents": ["doc1", "doc2"]
+}
+
+## Error Handling
+
+- Handles and displays error messages from the backend if:
+  - No email is entered.
+  - No model is selected.
+  - The backend fails to return a result.
+- Validates user input before triggering backend requests.
+
+## Setup and Running
+
+1. Install Dependencies
+   pip install -r requirements.txt
+
+   If not yet created, generate `requirements.txt` with:
+   pip freeze > requirements.txt
+
+2. Set Up Environment Variables
+   Create a `.env` file:
+   API_URL=http://localhost:8000
+
+   Replace the value with your deployed backend URL if applicable.
+
+3. Run the App
+   streamlit run Frontend.py
+
+## Dependencies
+
+This frontend relies on the following major libraries:
+- streamlit – for web UI.
+- requests – for backend API calls.
+- python-dotenv – for loading environment variables.
+- role_modfication.py – for role and organization logic.

@@ -1,0 +1,364 @@
+Backend Documentation
+
+# RAG Document Processing System Documentation
+
+## Overview
+
+This is a FastAPI-based Retrieval-Augmented Generation (RAG) system that processes documents, creates embeddings, and provides question-answering capabilities. The system uses AWS S3 for storage, FAISS for vector similarity search, BERT for embeddings, and Groq's LLM for answer generation.
+
+## Architecture
+
+### Core Components
+
+1. **Document Processing**: Handles PDF, DOCX, PPTX, and TXT files
+2. **Embedding Generation**: Uses BERT model for text embeddings
+3. **Vector Search**: FAISS index for similarity search
+4. **Storage**: AWS S3 for document and metadata storage
+5. **LLM Integration**: Groq API for answer generation
+6. **Metadata Management**: Local pickle-based metadata persistence
+
+### System Flow
+
+```
+Document Upload → Text Extraction → Embedding Generation → S3 Storage → FAISS Index → Query Processing → Answer Generation
+```
+
+## Environment Setup
+
+### Required Environment Variables
+
+```bash
+# Groq API Configuration
+GROQ_API_KEY=your_groq_api_key
+
+# AWS S3 Configuration
+S3_BUCKET=your_s3_bucket_name
+AWS_ACCESS_KEY=your_aws_access_key
+AWS_SECRET_KEY=your_aws_secret_key
+AWS_REGION=your_aws_region
+```
+
+### Dependencies
+
+```bash
+pip install fastapi uvicorn
+pip install torch transformers sentence-transformers
+pip install faiss-cpu numpy
+pip install boto3 python-dotenv
+pip install unstructured[pdf,docx,pptx]
+pip install groq better-profanity
+```
+
+## API Endpoints
+
+### 1. Index Management
+
+#### `POST /`
+**Auto-build Index on Login**
+
+```json
+{
+  "organization": "string",
+  "department": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Index is ready",
+  "index_built": true,
+  "documents_loaded": 42
+}
+```
+
+#### `GET /index_status`
+**Check Index Status**
+
+Parameters:
+- `org`: Organization name
+- `dept`: Department name
+- `base_output_dir`: Base directory (default: "document-upload2/test-output")
+
+**Response:**
+```json
+{
+  "index_built": true,
+  "total_documents": 42,
+  "index_size": 42,
+  "document_ids": ["doc1", "doc2"],
+  "metadata_entries": 42
+}
+```
+
+### 2. Document Upload
+
+#### `POST /upload_docs`
+**Process and Upload Documents**
+
+```json
+{
+  "file_path": "/path/to/document.pdf",
+  "base_output_dir": "document-upload2/test-output",
+  "org": "organization_name",
+  "dept": "department_name",
+  "user_email": "user@example.com",
+  "debug_mode": false
+}
+```
+
+**Response:**
+```json
+["document-upload2/test-output/org/dept/doc1/text/doc1_0.txt", "..."]
+```
+
+**Features:**
+- Supports PDF, DOCX, PPTX, TXT files
+- Extracts text, tables, and images
+- Duplicate detection using SHA256 hashing
+- Automatic FAISS index rebuilding
+
+### 3. Question Answering
+
+#### `POST /Answer`
+**Generate Answers from Documents**
+
+```json
+{
+  "query": "What is the main topic of the document?",
+  "org": "organization_name",
+  "dept": "department_name"
+}
+```
+
+**Response:**
+```json
+{
+  "result": "The main topic is...",
+  "source_documents": ["doc1", "doc2"]
+}
+```
+
+**Process:**
+1. Query embedding generation
+2. Similarity search using FAISS
+3. Context preparation
+4. LLM-based answer generation
+
+### 4. Document Retrieval
+
+#### `GET /get_source_document/{doc_id}`
+**Get Document with Base64 Content**
+
+Parameters:
+- `doc_id`: Document identifier
+- `org`: Organization name
+- `dept`: Department name
+
+**Response:**
+```json
+{
+  "doc_id": "document_id",
+  "s3_prefix": "s3/path/prefix",
+  "original_file": {
+    "key": "s3_key",
+    "base64": "base64_encoded_content",
+    "filename": "document.pdf",
+    "content_type": "application/pdf",
+    "size": 12345,
+    "download_url": "presigned_url"
+  },
+  "message": "Original file retrieved successfully"
+}
+```
+
+#### `GET /get_source_document_url/{doc_id}`
+**Get Document URLs and Metadata**
+
+**Response:**
+```json
+{
+  "doc_id": "document_id",
+  "original_file": {
+    "filename": "document.pdf",
+    "size": 12345,
+    "last_modified": "2025-01-01T00:00:00",
+    "content_type": "application/pdf",
+    "download_url": "presigned_url"
+  },
+  "content": "Extracted text content...",
+  "images": [
+    {
+      "filename": "image1.png",
+      "url": "presigned_url"
+    }
+  ],
+  "expires_in": 3600,
+  "message": "Document metadata, content, and images loaded successfully"
+}
+```
+
+### 5. Document Management
+
+#### `GET /list_documents`
+**List Documents with Role-based Filtering**
+
+Parameters:
+- `org`: Organization name
+- `dept`: Department name
+- `user_email`: User email (optional)
+- `user_role`: User role (optional)
+
+**Response:**
+```json
+{
+  "documents": [
+    {
+      "doc_id": "document_id",
+      "text_chunks": 15,
+      "images": 3,
+      "upload_date": "2025-01-01T00:00:00",
+      "uploaded_by": "user@example.com"
+    }
+  ],
+  "total_documents": 1,
+  "user_role": "RAG_user",
+  "filtered_by_ownership": false
+}
+```
+
+#### `DELETE /delete_document`
+**Delete Document and Rebuild Index**
+
+Parameters:
+- `org`: Organization name
+- `dept`: Department name
+- `doc_id`: Document identifier
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Document deleted successfully",
+  "deleted_objects": 25,
+  "index_rebuilt": true,
+  "metadata_updated": true
+}
+```
+
+### 6. Metadata Management
+
+#### `GET /metadata_status`
+**Get Metadata Database Status**
+
+**Response:**
+```json
+{
+  "total_entries": 42,
+  "entries": ["org1/dept1/doc1", "org1/dept1/doc2"]
+}
+```
+
+#### `POST /clear_metadata`
+**Clear All Metadata**
+
+**Response:**
+```json
+{
+  "message": "Metadata cleared successfully"
+}
+```
+
+## S3 Storage Structure
+
+```
+document-upload2/test-output/
+├── {org}/
+│   ├── {dept}/
+│   │   ├── {document_id}/
+│   │   │   ├── original_file/
+│   │   │   │   └── {filename}.{ext}
+│   │   │   ├── text/
+│   │   │   │   ├── {filename}0.txt
+│   │   │   │   ├── {filename}1.txt
+│   │   │   │   └── ...
+│   │   │   └── images/
+│   │   │       ├── image_0.png
+│   │   │       ├── image_1.png
+│   │   │       └── ...
+```
+
+## Key Features
+
+### Document Processing
+- **Multi-format Support**: PDF, DOCX, PPTX, TXT
+- **Content Extraction**: Text, tables, images
+- **Duplicate Detection**: SHA256-based content comparison
+- **Image Handling**: Automatic extraction and S3 upload
+
+### Search and Retrieval
+- **Semantic Search**: BERT-based embeddings
+- **Similarity Threshold**: Configurable distance threshold (default: 500)
+- **Result Ranking**: Euclidean distance-based scoring
+- **Context Preparation**: Automatic context formatting for LLM
+
+### Security and Access Control
+- **Role-based Access**: 
+  - `doc_owner`: Can only access own documents
+  - `RAG_admin`: Full access within org/dept
+  - `RAG_user`: Query access to all documents
+- **Presigned URLs**: Secure temporary access to S3 objects
+- **Content Filtering**: Profanity filtering support
+
+### Performance Optimizations
+- **Metadata Caching**: Local pickle-based metadata storage
+- **Index Persistence**: FAISS index rebuilding on demand
+- **Stale Data Cleanup**: Automatic cleanup of orphaned metadata
+- **Batch Processing**: Efficient document processing pipeline
+
+## Configuration
+
+### FAISS Index Parameters
+```python
+# Vector dimension (BERT base)
+EMBEDDING_DIMENSION = 768
+
+# Search parameters
+DEFAULT_K = 5  # Number of similar documents to retrieve
+SIMILARITY_THRESHOLD = 500  # Euclidean distance threshold
+```
+
+### LLM Configuration
+```python
+# Groq model settings
+MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+TEMPERATURE = 0.7
+MAX_TOKENS = 1000
+TOP_P = 1
+```
+
+## Error Handling
+
+The system includes comprehensive error handling for:
+- AWS S3 connection issues
+- Document processing failures
+- Embedding generation errors
+- Index building failures
+- LLM API errors
+
+## Monitoring and Debugging
+
+### Debug Mode
+Enable debug mode in upload requests for detailed logging:
+```json
+{
+  "debug_mode": true
+}
+```
+
+### Logging
+The system provides detailed logging for:
+- Document upload progress
+- S3 operations
+- Index rebuilding
+- Error conditions
